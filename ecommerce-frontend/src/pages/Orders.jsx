@@ -1,27 +1,53 @@
 import { useEffect, useMemo, useState } from 'react'
-useEffect(() => { loadOrders() }, [])
+import { createOrder, getOrders } from '../services/orderService'
+import Loader from '../components/Loader'
 
+const Orders = () => {
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [userId, setUserId] = useState('')
+  
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+  
+  const totalPrice = useMemo(() => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  }, [cart])
 
-const place = async () => {
-if (!userId) return alert('Enter a valid user id from your DB')
-if (!cart.length) return alert('Cart is empty')
-try {
-const payload = {
-user: userId,
-products: cart.map(i => i._id),
-totalPrice: Number(totalPrice.toFixed(2))
-}
-await createOrder(payload)
-alert('Order placed!')
-localStorage.removeItem('cart')
-await loadOrders()
-} catch (e) {
-alert(e?.response?.data?.error || e.message)
-}
-}
+  const loadOrders = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await getOrders()
+      setOrders(data)
+    } catch (e) {
+      setError(e?.response?.data?.error || e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  useEffect(() => { loadOrders() }, [])
 
-return (
+  const place = async () => {
+    if (!userId) return alert('Enter a valid user id from your DB')
+    if (!cart.length) return alert('Cart is empty')
+    try {
+      const payload = {
+        user: userId,
+        products: cart.map(i => i._id),
+        totalPrice: Number(totalPrice.toFixed(2))
+      }
+      await createOrder(payload)
+      alert('Order placed!')
+      localStorage.removeItem('cart')
+      await loadOrders()
+    } catch (e) {
+      alert(e?.response?.data?.error || e.message)
+    }
+  }
+
+  return (
 <div style={{ marginTop: 16 }}>
 <div className="card" style={{ marginBottom: 16 }}>
 <h2>Place Order</h2>
@@ -67,3 +93,6 @@ return (
 </div>
 </div>
 )
+}
+
+export default Orders
